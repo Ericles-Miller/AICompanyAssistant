@@ -7,6 +7,6 @@ import { IngestionService } from './ingestion.service';
 @Module({
   imports: [TypeOrmModule.forFeature([Chunk])],
   providers: [IngestionService, EmbeddingsService],
-  exports: [IngestionService],
+  exports: [IngestionService, EmbeddingsService],
 })
 export class IngestionModule {}
