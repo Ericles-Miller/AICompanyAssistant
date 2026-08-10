@@ -9,6 +9,9 @@ export class Document {
   @Column({ type: 'text' })
   filename: string;
 
+  @Column({ name: 'storage_key', type: 'text' })
+  storageKey: string;
+
   @CreateDateColumn({ name: 'uploaded_at', type: 'timestamptz' })
   uploadedAt: Date;
 
