@@ -16,7 +16,7 @@ export class IngestionService {
 
   async chunkAndSave(document: Document, text: string): Promise<Chunk[]> {
     const contents = splitIntoChunks(text);
-    const embeddings = await this.embeddingsService.embed(contents);
+    const embeddings = await this.embeddingsService.embed(contents, 'document');
 
     const chunks = contents.map((content, chunkIndex) =>
       this.chunksRepository.create({

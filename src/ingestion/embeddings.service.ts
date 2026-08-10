@@ -3,13 +3,15 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 const VOYAGE_MODEL = 'voyage-3.5-lite';
 const VOYAGE_EMBEDDINGS_URL = 'https://api.voyageai.com/v1/embeddings';
 
+type VoyageInputType = 'document' | 'query';
+
 interface VoyageEmbeddingsResponse {
   data: { embedding: number[]; index: number }[];
 }
 
 @Injectable()
 export class EmbeddingsService {
-  async embed(texts: string[]): Promise<number[][]> {
+  async embed(texts: string[], inputType: VoyageInputType): Promise<number[][]> {
     const response = await fetch(VOYAGE_EMBEDDINGS_URL, {
       method: 'POST',
       headers: {
@@ -19,7 +21,7 @@ export class EmbeddingsService {
       body: JSON.stringify({
         input: texts,
         model: VOYAGE_MODEL,
-        input_type: 'document',
+        input_type: inputType,
       }),
     });
 
