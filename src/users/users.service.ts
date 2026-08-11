@@ -10,7 +10,11 @@ export class UsersService {
     private readonly usersRepository: Repository<User>,
   ) {}
 
-  create(name: string): Promise<User> {
-    return this.usersRepository.save(this.usersRepository.create({ name }));
+  async create(name: string): Promise<User> {
+    return await this.usersRepository.save(this.usersRepository.create({ name }));
+  }
+
+  async findById(id: string): Promise<User | null> {
+    return await this.usersRepository.findOneBy({ id });
   }
 }

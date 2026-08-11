@@ -10,5 +10,6 @@ import { DocumentsService } from './documents.service';
   imports: [TypeOrmModule.forFeature([Document]), AwsModule, IngestionModule],
   controllers: [DocumentsController],
   providers: [DocumentsService],
+  exports: [DocumentsService],
 })
 export class DocumentsModule {}
