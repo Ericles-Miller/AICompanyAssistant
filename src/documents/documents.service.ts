@@ -53,4 +53,8 @@ export class DocumentsService {
   async findById(id: string): Promise<Document | null> {
     return await this.documentsRepository.findOneBy({ id });
   }
+
+  async findAll(): Promise<Document[]> {
+    return await this.documentsRepository.find({ order: { uploadedAt: 'DESC' } });
+  }
 }

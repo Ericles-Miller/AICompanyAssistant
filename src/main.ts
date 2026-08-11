@@ -7,6 +7,8 @@ import { ClassSerializerInterceptor } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.enableCors();
+
   const config = new DocumentBuilder()
     .setTitle('AI Company Assistant')
     .setDescription('API para upload de documentos internos e chat com RAG sobre eles')
