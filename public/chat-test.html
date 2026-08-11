@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Chat WebSocket - teste manual</title>
+    <script src="https://cdn.socket.io/4.8.3/socket.io.min.js"></script>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 720px;
+        margin: 40px auto;
+        padding: 0 16px;
+      }
+      label {
+        display: block;
+        margin-top: 12px;
+        font-weight: 600;
+      }
+      input,
+      textarea {
+        width: 100%;
+        padding: 8px;
+        box-sizing: border-box;
+        font-size: 14px;
+      }
+      button {
+        margin-top: 16px;
+        padding: 10px 20px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      #status {
+        margin-top: 8px;
+        font-size: 13px;
+        color: #666;
+      }
+      #answer {
+        white-space: pre-wrap;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        padding: 12px;
+        margin-top: 16px;
+        min-height: 80px;
+      }
+      #sources {
+        margin-top: 8px;
+        font-size: 13px;
+        color: #444;
+      }
+      #error {
+        margin-top: 8px;
+        color: #c0392b;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Chat WebSocket - teste manual</h1>
+    <div id="status">conectando...</div>
+
+    <label for="userId">userId</label>
+    <input id="userId" type="text" placeholder="id retornado por POST /users" />
+
+    <label for="documentId">documentId (opcional - modo documento inteiro)</label>
+    <input id="documentId" type="text" placeholder="deixe em branco para busca por similaridade" />
+
+    <label for="question">question</label>
+    <textarea id="question" rows="3" placeholder="quais EPIs são obrigatórios?"></textarea>
+
+    <button id="send">Enviar</button>
+
+    <div id="error"></div>
+    <div id="answer"></div>
+    <div id="sources"></div>
+
+    <script>
+      const socket = io('http://localhost:3333');
+      const statusEl = document.getElementById('status');
+      const answerEl = document.getElementById('answer');
+      const sourcesEl = document.getElementById('sources');
+      const errorEl = document.getElementById('error');
+      const sendButton = document.getElementById('send');
+
+      socket.on('connect', () => {
+        statusEl.textContent = 'conectado (' + socket.id + ')';
+      });
+
+      socket.on('disconnect', () => {
+        statusEl.textContent = 'desconectado';
+      });
+
+      socket.on('chat:chunk', (chunk) => {
+        answerEl.textContent += chunk;
+      });
+
+      socket.on('chat:done', (data) => {
+        sourcesEl.textContent = 'fontes: ' + (data.sources.length ? data.sources.join(', ') : '(nenhuma)');
+        sendButton.disabled = false;
+      });
+
+      socket.on('chat:error', (err) => {
+        errorEl.textContent = 'erro ' + err.statusCode + ': ' + err.message;
+        sendButton.disabled = false;
+      });
+
+      sendButton.addEventListener('click', () => {
+        const userId = document.getElementById('userId').value.trim();
+        const documentId = document.getElementById('documentId').value.trim();
+        const question = document.getElementById('question').value.trim();
+
+        if (!userId || !question) {
+          errorEl.textContent = 'preencha ao menos userId e question';
+          return;
+        }
+
+        answerEl.textContent = '';
+        sourcesEl.textContent = '';
+        errorEl.textContent = '';
+        sendButton.disabled = true;
+
+        socket.emit('chat:ask', {
+          userId,
+          question,
+          ...(documentId ? { documentId } : {}),
+        });
+      });
+    </script>
+  </body>
+</html>
