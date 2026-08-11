@@ -7,7 +7,7 @@ export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
   @Post()
-  async ask(@Body() { question }: AskQuestionDto) {
-    return await this.chatService.ask(question);
+  async ask(@Body() { userId, question, documentId }: AskQuestionDto) {
+    return await this.chatService.ask(userId, question, documentId);
   }
 }
