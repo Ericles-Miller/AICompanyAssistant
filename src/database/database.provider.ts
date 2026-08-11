@@ -2,6 +2,7 @@ import { DataSource, DataSourceOptions } from 'typeorm';
 import 'dotenv/config';
 import { Document } from '../documents/document.entity';
 import { Chunk } from '../ingestion/chunk.entity';
+import { User } from '../users/user.entity';
 
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
@@ -11,7 +12,7 @@ export const dataSourceOptions: DataSourceOptions = {
   database: process.env.DATABASE_NAME,
   port: Number(process.env.DATABASE_PORT),
   synchronize: true,
-  entities: [Document, Chunk],
+  entities: [Document, Chunk, User],
   migrations: [],
   logging: process.env.NODE_ENV === 'development' ? true : false,
 };
