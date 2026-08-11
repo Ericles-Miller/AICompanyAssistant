@@ -49,4 +49,8 @@ export class DocumentsService {
       chunksCreated: chunks.length,
     };
   }
+
+  async findById(id: string): Promise<Document | null> {
+    return await this.documentsRepository.findOneBy({ id });
+  }
 }

@@ -13,7 +13,7 @@ export interface RetrievedChunk {
   id: string;
   content: string;
   filename: string;
-  distance: number;
+  distance?: number;
 }
 
 @Injectable()
@@ -36,6 +36,17 @@ export class RetrievalService {
        order by c.embedding <=> $1::vector
        limit $3`,
       [vectorLiteral, MAX_DISTANCE, TOP_K],
+    );
+  }
+
+  async findByDocumentId(documentId: string): Promise<RetrievedChunk[]> {
+    return await this.chunksRepository.query(
+      `select c.id, c.content, d.filename
+       from chunks c
+       join documents d on d.id = c.document_id
+       where c.document_id = $1
+       order by c.chunk_index asc`,
+      [documentId],
     );
   }
 }
