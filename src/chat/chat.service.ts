@@ -1,12 +1,14 @@
 import { GoogleGenAI } from '@google/genai';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DocumentsService } from '../documents/documents.service';
-import { RetrievalService } from '../retrieval/retrieval.service';
+import { RetrievedChunk, RetrievalService } from '../retrieval/retrieval.service';
 import { UsersService } from '../users/users.service';
+import { Message } from './message.entity';
 import { MessagesService } from './messages.service';
 import { SYSTEM_PROMPT, buildUserMessage } from './prompt-builder';
 
 const GEMINI_MODEL = 'gemini-3.5-flash-lite';
+const FALLBACK_ANSWER = 'Não encontrei nenhum documento indexado para responder essa pergunta.';
 
 @Injectable()
 export class ChatService {
@@ -20,6 +22,63 @@ export class ChatService {
   ) {}
 
   async ask(userId: string, question: string, documentId?: string) {
+    const { history, chunks } = await this.prepareTurn(userId, question, documentId);
+
+    if (chunks.length === 0 && history.length === 0) {
+      await this.messagesService.save(userId, 'assistant', FALLBACK_ANSWER);
+      return { answer: FALLBACK_ANSWER, sources: [] };
+    }
+
+    const contents = this.buildContents(history, question, chunks);
+
+    const response = await this.ai.models.generateContent({
+      model: GEMINI_MODEL,
+      contents,
+      config: { systemInstruction: SYSTEM_PROMPT },
+    });
+
+    const answer = response.text ?? 'Não foi possível gerar uma resposta.';
+    await this.messagesService.save(userId, 'assistant', answer);
+
+    return { answer, sources: this.uniqueSources(chunks) };
+  }
+
+  async *askStream(
+    userId: string,
+    question: string,
+    documentId?: string,
+  ): AsyncGenerator<string, { sources: string[] }> {
+    const { history, chunks } = await this.prepareTurn(userId, question, documentId);
+
+    if (chunks.length === 0 && history.length === 0) {
+      await this.messagesService.save(userId, 'assistant', FALLBACK_ANSWER);
+      yield FALLBACK_ANSWER;
+      return { sources: [] };
+    }
+
+    const contents = this.buildContents(history, question, chunks);
+
+    const stream = await this.ai.models.generateContentStream({
+      model: GEMINI_MODEL,
+      contents,
+      config: { systemInstruction: SYSTEM_PROMPT },
+    });
+
+    let fullAnswer = '';
+    for await (const chunk of stream) {
+      const delta = chunk.text ?? '';
+      if (delta) {
+        fullAnswer += delta;
+        yield delta;
+      }
+    }
+
+    await this.messagesService.save(userId, 'assistant', fullAnswer);
+
+    return { sources: this.uniqueSources(chunks) };
+  }
+
+  private async prepareTurn(userId: string, question: string, documentId?: string) {
     const user = await this.usersService.findById(userId);
 
     if (!user) {
@@ -33,35 +92,19 @@ export class ChatService {
       ? await this.findFullDocumentChunks(documentId)
       : await this.retrievalService.search(question);
 
-    if (chunks.length === 0 && history.length === 0) {
-      const answer = 'Não encontrei nenhum documento indexado para responder essa pergunta.';
-      await this.messagesService.save(userId, 'assistant', answer);
+    return { history, chunks };
+  }
 
-      return { answer, sources: [] };
-    }
-
+  private buildContents(history: Message[], question: string, chunks: RetrievedChunk[]) {
     const newTurnText = chunks.length > 0 ? buildUserMessage(question, chunks) : question;
 
-    const contents = [
+    return [
       ...history.map((message) => ({
         role: message.role === 'user' ? 'user' : 'model',
         parts: [{ text: message.content }],
       })),
       { role: 'user', parts: [{ text: newTurnText }] },
     ];
-
-    const response = await this.ai.models.generateContent({
-      model: GEMINI_MODEL,
-      contents,
-      config: { systemInstruction: SYSTEM_PROMPT },
-    });
-
-    const answer = response.text ?? 'Não foi possível gerar uma resposta.';
-    await this.messagesService.save(userId, 'assistant', answer);
-
-    const sources = [...new Set(chunks.map((chunk) => chunk.filename))];
-
-    return { answer, sources };
   }
 
   private async findFullDocumentChunks(documentId: string) {
@@ -72,5 +115,9 @@ export class ChatService {
     }
 
     return await this.retrievalService.findByDocumentId(documentId);
+  }
+
+  private uniqueSources(chunks: RetrievedChunk[]): string[] {
+    return [...new Set(chunks.map((chunk) => chunk.filename))];
   }
 }

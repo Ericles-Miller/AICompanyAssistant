@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { DocumentsService } from './documents.service';
@@ -26,5 +26,10 @@ export class DocumentsController {
     }
 
     return this.documentsService.ingest(file);
+  }
+
+  @Get()
+  async findAll() {
+    return await this.documentsService.findAll();
   }
 }
